@@ -21,20 +21,50 @@ class _OutingTabState extends State<OutingTab> {
   OutingModel? _activeOuting;
   Stream<List<OutingModel>>? _outingsStream;
   String? _cachedUserId;
+  StreamSubscription<User?>? _authSubscription;
 
   bool get _isActive => _timer != null && _timer!.isActive;
 
   @override
   void initState() {
     super.initState();
+    debugPrint(
+      'OutingTab.initState: currentUser=${FirebaseAuth.instance.currentUser?.uid}',
+    );
     _initializeStream();
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      debugPrint('OutingTab.authStateChanges: user=${user?.uid}');
+      _initializeStream();
+    });
   }
 
   void _initializeStream() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
+    debugPrint(
+      'OutingTab._initializeStream: currentUser=$userId cached=$_cachedUserId',
+    );
     if (userId != null && userId != _cachedUserId) {
       _cachedUserId = userId;
-      _outingsStream = _outingService.getUserOutings(userId);
+      if (!mounted) {
+        _outingsStream = _outingService.getUserOutings(userId);
+        return;
+      }
+      setState(() {
+        _outingsStream = _outingService.getUserOutings(userId);
+      });
+      return;
+    }
+
+    if (userId == null && _cachedUserId != null) {
+      // user signed out
+      _cachedUserId = null;
+      if (!mounted) {
+        _outingsStream = null;
+        return;
+      }
+      setState(() {
+        _outingsStream = null;
+      });
     }
   }
 
@@ -46,6 +76,7 @@ class _OutingTabState extends State<OutingTab> {
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _timer?.cancel();
     super.dispose();
   }
@@ -201,11 +232,14 @@ class _OutingTabState extends State<OutingTab> {
             StreamBuilder<List<OutingModel>>(
               stream: _outingsStream,
               builder: (context, snapshot) {
+                debugPrint(
+                  'OutingTab._buildOutingAnalytics snapshot: state=${snapshot.connectionState} hasData=${snapshot.hasData} hasError=${snapshot.hasError}',
+                );
                 if (snapshot.hasError) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Text(
-                      'Error loading analytics: ${snapshot.error}',
+                      'ERROR: ${snapshot.error}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -224,6 +258,9 @@ class _OutingTabState extends State<OutingTab> {
                 }
 
                 final outings = snapshot.data!;
+                debugPrint(
+                  'OutingTab._buildOutingAnalytics: outings.length=${outings.length} for user=$userId',
+                );
                 if (outings.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -339,11 +376,14 @@ class _OutingTabState extends State<OutingTab> {
             StreamBuilder<List<OutingModel>>(
               stream: _outingsStream,
               builder: (context, snapshot) {
+                debugPrint(
+                  'OutingTab._buildOutingHistory snapshot: state=${snapshot.connectionState} hasData=${snapshot.hasData} hasError=${snapshot.hasError}',
+                );
                 if (snapshot.hasError) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Text(
-                      'Error loading history: ${snapshot.error}',
+                      'ERROR: ${snapshot.error}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -362,6 +402,9 @@ class _OutingTabState extends State<OutingTab> {
                 }
 
                 final outings = snapshot.data!;
+                debugPrint(
+                  'OutingTab._buildOutingHistory: outings.length=${outings.length} for user=$userId',
+                );
                 if (outings.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
