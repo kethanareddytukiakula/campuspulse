@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../domain/outing_model.dart';
 
@@ -65,19 +66,30 @@ class OutingService {
   }
 
   Stream<List<OutingModel>> getUserOutings(String userId) {
+    debugPrint('OutingService.getUserOutings() - subscribe userId=$userId');
+
     return _outingCollection
         .where('userId', isEqualTo: userId)
+        .orderBy('startTime', descending: true)
         .snapshots()
         .map((querySnapshot) {
-          final outings = querySnapshot.docs
-              .map((doc) => OutingModel.fromMap(doc.data(), doc.id))
-              .toList();
-          // Sort by startTime descending in code instead of in query
+          debugPrint(
+            'OutingService: snapshot for user=$userId docs=${querySnapshot.docs.length}',
+          );
+          final outings = querySnapshot.docs.map((doc) {
+            try {
+              return OutingModel.fromMap(doc.data(), doc.id);
+            } catch (e, st) {
+              debugPrint(
+                'OutingService: failed parsing doc ${doc.id} for user=$userId: $e\n$st',
+              );
+              rethrow;
+            }
+          }).toList();
+
+          // already ordered by startTime desc in query, but keep defensive sort
           outings.sort((a, b) => b.startTime.compareTo(a.startTime));
           return outings;
-        })
-        .handleError((error) {
-          return const <OutingModel>[];
         });
   }
 }
