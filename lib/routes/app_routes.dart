@@ -7,6 +7,8 @@ import '../features/home/presentation/screens/home_screen.dart';
 import '../features/navigation/presentation/screens/main_navigation_screen.dart';
 import 'route_names.dart';
 
+import '../features/profile/screens/profile_screen.dart';
+
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     RouteNames.splash: (context) => const SplashScreen(),
@@ -14,5 +16,7 @@ class AppRoutes {
     RouteNames.signup: (context) => const SignupScreen(),
     RouteNames.home: (context) => const HomeScreen(),
     RouteNames.main: (context) => const MainNavigationScreen(),
+
+    RouteNames.profile: (context) => const ProfileScreen()
   };
 }
